@@ -1,0 +1,789 @@
+<h1>Overview of Go Type System</h1>
+
+<p>
+This article will introduce all kinds of types in Go and the concepts regarding
+Go type system. It is hard to have a thorough understanding of Go, without
+knowing these fundamental concepts.
+</p>
+
+<h3>Concept: Basic Types</h3>
+
+<div>
+Built-in basic types in Go have been also introduced in
+<a href="basic-types-and-value-literals.html">built-in basic types
+and basic value literals</a>.
+For completeness of the current article, these built-in basic types
+are re-listed here.
+<ul>
+<li>Built-in string type: <code>string</code>.</li>
+<li>Built-in boolean type: <code>bool</code>.</li>
+<li>Built-in numeric types:
+	<ul>
+	<li><code>int8</code>, <code>uint8</code> (<code>byte</code>), <code>int16</code>, <code>uint16</code>, <code>int32</code> (<code>rune</code>), <code>uint32</code>, <code>int64</code>, <code>uint64</code>, <code>int</code>, <code>uint</code>, <code>uintptr</code>.</li>
+	<li><code>float32</code>, <code>float64</code>.</li>
+	<li><code>complex64</code>, <code>complex128</code>.</li>
+	</ul>
+</li>
+</ul>
+
+<p>
+Note, <code>byte</code> is a built-in alias of <code>uint8</code>,
+and <code>rune</code> is a built-in alias of <code>int32</code>.
+We can also declare custom type aliases (see below).
+</p>
+
+<p>
+Except <a href="string.html">string types</a>,
+Go 101 article series will not try to explain more on other basic types.
+</p>
+</div>
+
+<h3>Concept: Composite Types</h3>
+
+<div>
+Go supports the following composite types:
+<ul>
+<li><a href="pointer.html">pointer types</a> - C pointer alike.</li>
+<li><a href="struct.html">struct types</a> - C struct alike.</li>
+<li><a href="function.html">function types</a> - functions are first-class types in Go.</li>
+<li><a href="container.html">container types</a>:
+	<ul>
+	<li>array types - fixed-length container types.</li>
+	<li>slice type - dynamic-length and dynamic-capacity container types.</li>
+	<li>map types - maps are associative arrays (or dictionaries). The standard Go compiler implements maps as hashtables.</li>
+	</ul>
+</li>
+<li><a href="channel.html">channel types</a> - channels are used to synchronize data among goroutines (the green threads in Go).</li>
+<li><a href="interface.html">interface types</a> - interfaces play a key role in reflection and polymorphism.</li>
+</ul>
+</div>
+
+<div>
+Composite types may be denoted as their respective type literals.
+Following are some literal representation examples of all kinds of composite types.
+<pre class="line-numbers"><code class="language-go">// Assume T is an arbitrary type and Tkey is
+// a type supporting comparison (== and !=).
+
+*T         // a pointer type
+[5]T       // an array type
+[]T        // a slice type
+map[Tkey]T // a map type
+
+// a struct type
+struct {
+	name string
+	age  int
+}
+
+// a function type
+func(int) (bool, string)
+
+// an interface type
+interface {
+	Method0(string) int
+	Method1() (int, bool)
+}
+
+// some channel types
+chan T
+chan<- T
+<-chan T
+</code></pre>
+
+<p>
+</p>
+
+<p>
+<a href="#types-not-support-comparison">Comparable and incomparable types</a> will be explained below.
+</p>
+</div>
+
+<a class="anchor" id="type-kinds"></a>
+<h3>Fact: Kinds of Types</h3>
+
+<p>
+Each of the above mentioned basic and composite types corresponds to one kind of types.
+Besides these kinds, the unsafe pointer types introduced in the
+<a href="https://golang.org/pkg/unsafe"><code>unsafe</code> standard package</a>
+also belong to one kind of types in Go.
+So, up to now (Go 1.13), Go has 26 kinds of types.
+</p>
+
+<a class="anchor" id="type-definition"></a>
+<h3>Syntax: Type Definitions</h3>
+
+<p><i>
+(<b>Type definition</b>, or type definition declaration,
+initially called <b>type declaration</b>, was the only type declaration way before Go 1.9.
+Since Go 1.9, type definition has become one of two forms of type declarations.
+The new form is called <b>type alias declaration</b>,
+which will be introduced in the next section.)
+</i></p>
+
+<div>
+In Go, we can define new types by using the following form.
+In the syntax, <code>type</code> is a keyword.
+<pre class="line-numbers"><code class="language-go">// Define a solo new type.
+type NewTypeName SourceType
+
+// Define multiple new types together.
+type (
+	NewTypeName1 SourceType1
+	NewTypeName2 SourceType2
+)
+</code></pre>
+
+<p>
+New type names must be identifiers.
+</p>
+
+<p>
+The second type declaration in the above example includes two type specifications.
+If a type declaration contains more than one type specification,
+the type specifications must be enclosed within a pair of <code>()</code>.
+</p>
+
+<div>
+Note,
+<ul>
+<li>
+	a new defined type and its respective source type in type definitions
+	are two distinct types.
+</li>
+<li>
+	two types defined in two type definitions are always two distinct types.
+</li>
+<li>
+	the new defined type and the source type will share the same
+	underlying type (see below for what are underlying types),
+	and their values can be converted to each other.
+</li>
+<li>
+	types can be defined within function bodies.
+</li>
+</ul>
+</div>
+
+
+
+<!--
+Type definition can be viewed as type copying.
+<ul>
+<li>
+	The new type will copy the value memory layout of the source type.
+</li>
+<li>
+	If the source type is an interface type,
+	the new type, also an interface type, will have the same method set as the source type.
+</li>
+<li>
+	If the source type is a struct type,
+	the new type will also copy all the fields of the source type.
+</li>
+<li>
+	If the source type is a struct type,
+	then the new type will obtain the methods defined, either explicitly or implicitly,
+	for the types embedded in the source struct type.
+</li>
+<li>
+	The new type will not obtain the methods directly defined for the source type.
+</li>
+</ul>
+
+<p>
+The new defined type and the source type are two different types,
+even if their values share the same memory layout.
+In other words, the new defined type is not an alias of the source type.
+</p>
+
+-->
+
+Some type definition examples:
+<pre class="line-numbers"><code class="language-go">// The following new defined and source types
+// are all basic types.
+type (
+	MyInt int
+	Age   int
+	Text  string
+)
+
+// The following new defined and source types are
+// all composite types.
+type IntPtr *int
+type Book struct{author, title string; pages int}
+type Convert func(in0 int, in1 bool)(out0 int, out1 string)
+type StringArray [5]string
+type StringSlice []string
+
+func f() {
+	// The names of the three defined types
+	// can be only used within the function.
+	type PersonAge map[string]int
+	type MessageQueue chan string
+	type Reader interface{Read([]byte) int}
+}
+</code></pre>
+</div>
+
+<a class="anchor" id="type-alias"></a>
+<h3>Syntax: Type Alias Declarations</h3>
+
+<p><i>
+(<b>Type alias declaration</b> is one new kind of type declarations added since Go 1.9.)
+</i></p>
+
+<!--
+aliases should not be called as types:
+https://github.com/golang/go/issues/31243#issuecomment-481021726
+-->
+
+<p>
+As above mentioned, there are only two built-in type aliases in Go,
+<code>byte</code> (alias of <code>uint8</code>) and
+<code>rune</code> (alias of <code>int32</code>).
+They are the only two type aliases before Go 1.9.
+</p>
+
+<div>
+Since Go 1.9, we can declare custom type aliases by using the following syntax.
+The syntax of alias declaration is much like type definition,
+but please note there is a <code>=</code> in each type alias declaration.
+<pre class="line-numbers"><code class="language-go">type (
+	Name = string
+	Age  = int
+)
+
+type table = map[string]int
+type Table = map[Name]Age
+</code></pre>
+
+<p>
+Type alias names must be identifiers.
+Like type definitions, type aliases can also be declared within function bodies.
+</p>
+
+<div>
+A type name (or literal) and its aliases all denote an identical type.
+By the above declarations, <code>Name</code> is an alias of <code>string</code>,
+so both denote the same type.
+The same applies to the other three pairs of type names and literals:
+<ul>
+<li>
+	<code>Age</code> and <code>int</code>
+</li>
+<li>
+	<code>table</code> and <code>map[string]int</code>
+</li>
+<li>
+	<code>Table</code> and <code>map[Name]Age</code>
+</li>
+</ul>
+</div>
+
+<p>
+In fact, the literals <code>map[string]int</code>
+and <code>map[Name]Age</code> also denote the same type.
+So, the same, aliases <code>table</code> and <code>Table</code> also denote the same type.
+</p>
+
+<p>
+Note, although aliases <code>table</code> and <code>Table</code> denote the same type,
+<code>Table</code> is exported so it can be used by other packages
+but this does not apply to <code>table</code>.
+</p>
+
+<!--
+<p>
+Type alias declarations are much useful in refactoring large Go projects.
+</p>
+-->
+</div>
+
+<a class="anchor" id="non-defined-type"></a>
+<h3>Concept: Defined Types vs. Non-Defined Types</h3>
+
+<p>
+A defined type is a type defined in a type definition.
+</p>
+
+<p>
+All basic types are defined. A non-defined type must be a composite type.
+</p>
+
+<div>
+In the following example. type alias <code>C</code> and type literal
+<code>[]string</code> both represent the same non-defined types,
+but type <code>A</code> and type alias <code>B</code> both represent the same defined type.
+<pre class="line-numbers"><code class="language-go">type A []string
+type B = A
+type C = []string
+</code></pre>
+
+</div>
+
+<a class="anchor" id="unnamed-type"></a>
+<h3>Concept: Named Types vs. Unnamed Types</h3>
+
+<div>
+<p>
+Before Go 1.9, the terminology <b>named type</b> is defined accurately in Go specification.
+A named type was defined as a type who is represented by an identifier.
+Along with the type alias feature introduced in Go 1.9,
+this terminology is removed from Go specification as well,
+for it may cause some confusions in explaining and understanding some Go concepts.
+For example, some type names might denote unnamed types (such as the alias <code>C</code>,
+which is shown in the last section, denotes an unnamed type <code>[]string</code>).
+</p>
+
+To avoid causing such confusions, since Go 1.9,
+a new terminology <b>defined type</b> is introduced to fulfill
+the blank by removing the old <b>named type</b> terminology.
+However, this change brings 
+<a href="https://github.com/golang/example/tree/master/gotypes#named-types">some embarrassing situations</a>,
+and causes <a href="https://github.com/golang/go/issues/32496">some inconveniences</a>
+in <a href="https://github.com/golang/go/issues/22005">explaining some concepts</a>.
+To avoid these new problems, Go 101 articles try to follow several principles:
+<ul>
+<li>
+	An alias will never be called as a type, though we may say it denotes/represents a type.
+</li>
+<li>
+	The terminology <b>named type</b> is viewed as an exact equivalence of <b>defined type</b>.
+	(And <b>unnamed type</b> exactly means <b>non-defined type</b>.)
+	In other words, when it says "a type alias <code>T</code> is a named type",
+	it actually means the type represented by the alias <code>T</code> is a named type.
+	If <code>T</code> represents an unnamed type, we should never say <code>T</code> is a named type,
+	even if the alias <code>T</code> itself has a name.
+</li>
+<li>
+	When we mention a type name, it might be the name of a defined type or the name of a type alias.
+</li>
+</ul>
+</div>
+
+<!--
+<div>
+In Go,
+<ul>
+<li>
+	if a type has a name, which must be an identifier, and the identifier is not
+	the blank identifier <code>_</code>, then this type is called a named type.
+	All basic types are named types.
+	A declared type is also a named type (if its identifier is not the blank identifier).
+</li>
+<li>
+	if a type can't be represented by a pure identifier,
+	then the type is an unnamed type.
+	The composite types denoted by their respective type literals are all unnamed types.
+</li>
+</ul>
+
+<p>
+An unnamed type must be a composite type,
+It is not true vice versa,
+for a composite type may be a defined type.
+</p>
+</div>
+-->
+
+<a class="anchor" id="underlying-type"></a>
+<h3>Concept: Underlying Types</h3>
+
+<div>
+In Go, each type has an underlying type. Rules:
+<ul>
+<li>for built-in types (including the <code>Pointer</code> type defined in the <code>unsafe</code> standard code package),
+	the respective underlying types are themselves.</li>
+<li>the underlying types of a non-defined type, which must be a composite type, is itself.</li>
+<li>in a type declaration, the newly declared type and the source type have the same underlying type.</li>
+</ul>
+
+Examples:
+<pre class="line-numbers"><code class="language-go">// The underlying types of the following ones are both int.
+type (
+	MyInt int
+	Age   MyInt
+)
+
+// The following new types have different underlying types.
+type (
+	IntSlice   []int   // underlying type is []int
+	MyIntSlice []MyInt // underlying type is []MyInt
+	AgeSlice   []Age   // underlying type is []Age
+)
+
+// The underlying types of []Age, Ages, and AgeSlice
+// are all the non-defined type []Age.
+type Ages AgeSlice
+</code></pre>
+
+<p>
+</p>
+
+<p>
+How can an underlying type be traced given a user declared type?
+The rule is, when a built-in basic type or a non-defined type is met, the tracing should be stopped.
+Take the type declarations shown above as examples, let's trace their underlying types.
+</p>
+
+<pre>
+MyInt → int
+Age → MyInt → int
+IntSlice → []int
+MyIntSlice → []MyInt <span style="color:#aaa">→ <span style="text-decoration:line-through;">[]int</span></span>
+AgeSlice → []Age <span style="color:#aaa">→ <span style="text-decoration:line-through;">[]MyInt</span></span> <span style="color:#aaa">→ <span style="text-decoration:line-through;">[]int</span></span>
+Ages → AgeSlice → []Age <span style="color:#aaa">→ <span style="text-decoration:line-through;">[]MyInt</span></span> <span style="color:#aaa">→ <span style="text-decoration:line-through;">[]int</span></span>
+</pre>
+
+<p>
+
+</p>
+
+In Go,
+<ul>
+<li>types whose underlying types are <code>bool</code> are called <b>boolean types</b>;</li>
+<li>types whose underlying types are any of the built-in integer types are called <b>integer types</b>;</li>
+<li>types whose underlying types are either <code>float32</code> or <code>float64</code> are called <b>floating-point types</b>;</li>
+<li>types whose underlying types are either <code>complex64</code> or <code>complex128</code> are called <b>complex types</b>;</li>
+<li>integer, floating-point and complex types are also called <b>numeric types</b>;</li>
+<li>types whose underlying types are <code>string</code> are called <b>string types</b>.</li>
+</ul>
+</div>
+
+<p>
+The concept of underlying type plays an important role in
+<a href="value-conversions-assignments-and-comparisons.html">value conversions, assignments and comparisons in Go</a>.
+</p>
+
+<h3>Concept: Values</h3>
+
+<p>
+An instance of a type is called a value, of the type.
+A type may have many values, one of them is the zero value of the type.
+Values of the same type share some common properties.
+</p>
+
+<p>
+Each type has a zero value, which can be viewed as the default value of the type.
+The predeclared <code>nil</code> identifier can used to represent
+zero values of slices, maps, functions, channels,
+pointers (including type-unsafe pointers) and interfaces.
+For more information on <code>nil</code>, please read <a href="nil.html">nil in Go</a>.
+</p>
+
+<p>
+There are several kinds of value representation forms in code, including
+<a href="basic-types-and-value-literals.html">literals</a>,
+<a href="constants-and-variables.html#constant">named constants</a>,
+<a href="constants-and-variables.html#variable">variables</a> and
+<a href="expressions-and-statements.html">expressions</a>,
+though the former three can be viewed as special cases of the latter one.
+</p>
+
+<p>
+A value can be <a href="constants-and-variables.html#untyped-value">typed or untyped</a>.
+</p>
+
+<p>
+All kinds of basic value literals have been introduced in the article
+<a href="basic-types-and-value-literals.html">basic types and basic value literals</a>.
+There are two more kinds of literals in Go, composite literals and function literals.
+</p>
+
+<p>
+Function literals, as the name implies, are used to represent function values.
+A <a href="function-declarations-and-calls.html#declaration">function declaration
+</a> is composed of a function literal and an identifier (the function name).
+</p>
+
+<p>
+Composite literals are used to represent values of struct types
+and container types (arrays, slices and maps),
+Please read <a href="struct.html">structs in Go</a>
+and <a href="container.html">containers in Go</a> for more details.
+</p>
+
+<p>
+There are no literals to represent values of pointers, channels and interfaces.
+</p>
+
+<a class="anchor" id="value-part"></a>
+<h3>Concept: Value Parts</h3>
+
+<p>
+At run time, many values are stored somewhere in memory.
+In Go, each of such values has a direct part,
+however, some of them have one or more indirect parts.
+Each value part occupies a continuous memory segment.
+The indirect underlying parts of a value are referenced
+by its direct part through <a href="pointer.html">pointers</a>.
+</p>
+
+<p>
+The terminology <a href="value-part.html"><b>value part</b></a> is not defined in Go specification.
+It is just used in Go 101 to make some explanations simpler
+and help Go programmers understand Go types and values better.
+</p>
+
+<a class="anchor" id="value-size"></a>
+<h3>Concept: Value Sizes</h3>
+
+<p>
+When a value is stored in memory, the number of bytes occupied
+by the direct part of the value is called the size of the value.
+As all values of the same type have the same value size,
+we often call the same value size of a type as the size of the type.
+</p>
+
+<p>
+We can use the <code>Sizeof</code> function in the <code>unsafe</code>
+standard package to get the size of any value.
+</p>
+
+<p>
+Go specification doesn't specify value size requirements for non-numeric types.
+The requirements for value sizes of all kinds of basic numeric types
+are listed in the article
+<a href="basic-types-and-value-literals.html">basic Types and basic value
+literals</a>.
+</p>
+
+<a class="anchor" id="pointer-base-type"></a>
+<h3>Concept: Base Type of a Pointer Type</h3>
+
+<p>
+For a pointer type, assume its underlying type can be denoted as <code>*T</code>
+in literal, then <code>T</code> is called the base type of the pointer type.
+</p>
+
+<p>
+More information on pointer types and values can be found in the article
+<a href="pointer.html">pointers in Go</a>.
+</p>
+
+<h3>Concept: Fields of a Struct Type</h3>
+
+<div>
+A struct type consists a collection of member variable declarations.
+Each of the member variable declarations is called "field" of the struct type.
+For example, the following struct type <code>Book</code> has
+three fields, <code>author</code>, <code>title</code> and <code>pages</code>.
+<pre class="line-numbers"><code class="language-go">struct {
+	author string
+	title  string
+	pages  int
+}
+</code></pre>
+</div>
+
+<p>
+More information on struct types and values can be found in the article
+<a href="struct.html">structs in Go</a>.
+</p>
+
+<h3>Concept: Signature of Function Types</h3>
+
+<p>
+The signature of a function type is composed of
+the input parameter definition list and
+the output result definition list of the function.
+</p>
+
+<p>
+The function name and body are not parts of a function signature.
+Parameter and result types are important for a function signature,
+but parameter and result names are not important.
+</p>
+
+<p>
+Please read <a href="function.html">functions in Go</a> for more details
+on function types and function values.
+</p>
+
+<h3>Concept: Method and Method Set of a Type</h3>
+
+<p>
+In Go, some types can have <a href="method.html">methods</a>.
+Methods can also be called member functions.
+The method set of a type is composed of all the methods of the type.
+</p>
+
+<h3>Concept: Dynamic Type and Dynamic Value of an Interface Value</h3>
+
+<p>
+Interface values are the values whose types are interface types.
+</p>
+
+<p>
+Each interface value can box a non-interface value in it.
+The value boxed in an interface value is called the dynamic value of the interface value.
+The type of the dynamic value is called the dynamic type of the interface value.
+An interface value boxing nothing is a zero interface value.
+A zero interface value has neither a dynamic value nor a dynamic type.
+</p>
+
+<p>
+An interface type can specify zero or several methods, which form the method set of the interface type.
+</p>
+
+<p>
+If the method set of a type, which is either an interface type or a non-interface type,
+is the super set of the method set of an interface type, we say the type
+<a href="interface.html#implementation">implements</a> the interface type.
+</p>
+
+<p>
+For more about interface types and values,
+please read <a href="interface.html">interfaces in Go</a>.
+</p>
+
+<a class="anchor" id="concrete-type"></a>
+<h3>Concept: Concrete Value and Concrete Type of a Value</h3>
+
+<p>
+For a (typed) non-interface value, its concrete value is itself and its concrete type is the type of the value.
+</p>
+
+<p>
+A zero interface value has neither concrete type nor concrete value.
+For a non-zero interface value, its concrete value is its dynamic value and its concrete type is its dynamic type.
+</p>
+
+<h3>Concept: Container Types</h3>
+
+<p>
+Arrays, slices and maps can be viewed as formal container types.
+</p>
+
+<p>
+Sometimes, string and channel types can also be viewed as container types informally.
+</p>
+
+<p>
+Each value of a container type has a length,
+either that container type is a formal one or an informal one.
+</p>
+
+<p>
+More information on formal container types and values can be found in the
+article <a href="container.html">containers in Go</a>.
+</p>
+
+<h3>Concept: Key Type of a Map Type</h3>
+
+<p>
+If the underlying type of a map type can be denoted as <code>map[Tkey]T</code>,
+then <code>Tkey</code> is called the key type of the map type.
+<code>Tkey</code> must be a comparable type (see below).
+</p>
+
+<h3>Concept: Element Type of a Container Type</h3>
+
+<div>
+The types of the elements stored in values of a container type must be identical.
+The identical type of the elements is called the element type of the container type.
+<ul>
+<li>For an array type, if its underlying type is <code>[N]T</code>, then its element type is <code>T</code>.</li>
+<li>For a slice type, if its underlying type is <code>[]T</code>, then its element type is <code>T</code>.</li>
+<li>For a map type, if its underlying type is <code>map[Tkey]T</code>, then its element type is <code>T</code>.</li>
+<li>For a channel type, if its underlying type is <code>chan T</code>, <code>chan&lt;- T</code> or <code>&lt;-chan T</code>, then its element type is <code>T</code>.</li>
+<li>The element type of any string type is always <code>byte</code> (a.k.a. <code>uint8</code>).</li>
+</ul>
+</div>
+
+<h3>Concept: Directions of Channel Types</h3>
+
+<div>
+Channel values can be viewed as synchronized first-in-first-out (FIFO) queues.
+Channel types and values have directions.
+<ul>
+<li>
+	A channel value which is both sendable and receivable is called
+	a bidirectional channel. Its type is called a bidirectional channel type.
+	The underlying types of bidirectional channel types are denoted as <code>chan T</code> in literal.
+</li>
+<li>
+	A channel value which is only sendable is called
+	a send-only channel. Its type is called a send-only channel type.
+	Send-only channel types are denoted as <code>chan&lt;- T</code> in literal.
+</li>
+<li>
+	A channel value which is only receivable is called
+	a receive-only channel. Its type is called a receive-only channel type.
+	Receive-only channel types are denoted as <code>&lt;-chan T</code> in literal.
+</li>
+</ul>
+</div>
+
+<p>
+More information on channel types and values can be found in the article
+<a href="channel.html">channels in Go</a>.
+</p>
+
+<a class="anchor" id="types-not-support-comparison"></a>
+<h3>Fact: Types Which Support or Don't Support Comparisons</h3>
+
+<div>
+Currently (Go 1.13), Go doesn't support comparisons
+(with the <code>==</code> and <code>!=</code> operators)
+between values of the following types:
+<ul>
+<li>slice types</li>
+<li>map types</li>
+<li>function types</li>
+<li>
+any struct type with a field whose type is incomparable
+and any array type which element type is incomparable.
+</li>
+</ul>
+
+<p>
+Above listed types are called incomparable types.
+All other types are called comparable types.
+Compilers forbid comparing two values of incomparable types.
+</p>
+
+<p>
+Note, incomparable types are also called as incomparable types in many articles.
+</p>
+
+<p>
+The key type of any map type must be a comparable type.
+</p>
+
+<p>
+We can learn more about the detailed rules of comparisons from the article
+<a href="value-conversions-assignments-and-comparisons.html#comparison-rules">value conversions,
+assignments and comparisons in Go</a>.
+</p>
+</div>
+
+<h3>Fact: Object-Oriented Programming in Go</h3>
+
+<div>
+Go is not a full-featured object-oriented programming language,
+but Go really supports some object-oriented programming styles.
+Please read the following listed articles for details:
+<ul>
+<li>
+	<a href="method.html">methods in Go</a>.
+</li>
+<li>
+	<a href="interface.html#implementation">implementations in Go</a>.
+</li>
+<li>
+	<a href="type-embedding.html">type embedding in Go</a>.
+</li>
+</ul>
+</div>
+
+<h3>Fact: Generics in Go</h3>
+
+<p>
+Up until now (Go 1.13), the generic functionalities in Go are limited to built-in types and functions.
+Custom generics are still in draft phase now.
+Please read <a href="generic.html">built-in generics in Go</a> for details.
+</p>
+
+
+

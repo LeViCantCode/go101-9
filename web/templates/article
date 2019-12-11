@@ -1,0 +1,93 @@
+
+{{ $.Title }}
+
+{{ $.Content }}
+
+<hr>
+
+<div class="alert alert-success"><small>
+
+<p>
+The <b><i>Go 101</i></b> project is hosted on both
+<a href="https://github.com/go101/go101">Github</a>
+and <a href="https://gitlab.com/Go101/go101">Gitlab</a>.
+Welcome to improve <b><i>Go 101</i></b> articles
+by submitting corrections for all kinds of mistakes,
+such as typos, grammar errors, wording inaccuracies,
+description flaws, code bugs and broken links.
+</p>
+
+<p>
+If you would like to learn some Go details and facts every serveral days,
+please follow Go 101's official Twitter account: <a href="https://twitter.com/go100and1">@go100and1</a>.
+</p>
+
+</small></div>
+
+<div class="alert alert-warning"><small>
+
+<div>
+{{- if ne $.FilenameWithoutExt "101" -}}
+
+The digital versions of this book are available at the following stores and forms:
+<ul>
+<li>
+	<a href="https://leanpub.com/go101">Leanpub store</a>,
+	<i>$19.99+</i>, Leanpub gets 20%, Tapir gets 80%.
+</li>
+<li>
+	<a href="https://books.apple.com/us/book/id1459984231">Apple Books store</a>,
+	<i>$19.99</i>, Apple gets 30%, Tapir gets 70%.
+</li>
+<li>
+	<a href="https://www.amazon.com/dp/B07Q3HWZ98">Amazon Kindle store</a>,
+	<i>$39.99</i>, Amazon gets 65%, Tapir gets 35%.
+</li>
+<li>
+	<a href="https://github.com/go101/go101/releases">Free ebooks</a>,
+	including pdf, epub and azw3 formats.
+</li>
+</ul>
+
+Tapir, the author of Go 101, has spent 3+ years on writing the Go 101 book
+and maintaining the go101.org website.
+New contents will continue being added to the book and the website from time to time.
+{{ end -}}
+
+If you would like to, you can support the book and the website by
+making a donation through Paypal (<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=PJWNSMCJ8XLX8&source=url">$5</a>, <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=EK54M5NSXVFLL&source=url">$9</a>, <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=Z7NNPZN28Z6FL&source=url">$15</a>, or <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=3VLHQW5VAVCUY&source=url">$25</a>) or buying Tapir a coffee (<a href="https://ko-fi.com/go_101" target="_blank">way 1</a> and <a href="https://www.buymeacoffee.com/go101" target="_blank">way 2</a>).
+</div>
+
+{{ if false }}
+<div class="text-center" style="padding: 6px; font-size: small;">
+(Paypal donation QR code)<br/>
+<img src="res/paypal-donate-qr-code-5.png" alt="paypal donate QR code"></img>
+</div>
+{{ end }}
+
+<p></p>
+
+<div>
+You can also support Go 101 by playing <a href="https://www.tapirgames.com">Tapir's games</a>.
+
+<ul>
+<li>
+	<a href="https://www.tapirgames.com/App/Color-Infection">Color Infection</a> (★★★★★), a physics based original casual puzzle game. 140+ levels. 
+</li>
+<li>
+	<a href="https://www.tapirgames.com/App/Rectangle-Pushers">Rectangle Pushers</a> (★★★★★), an original casual puzzle game. Two modes, 104+ levels. 
+</li>
+<li>
+	<a href="https://www.tapirgames.com/App/Let-Us-Play-With-Particles">Let's Play With Particles</a>, a casual action original game. Three mini games are included.
+</li>
+</ul>
+</div>
+
+Cryptocurrency donations are welcome too:
+<div style="padding-left:30px">
+<i>Bitcoin</i>: 1xucQbv5jujFPPwhyg395ri5yV71hx9g9<br/>
+<i>Ethereum</i>: 0x5dc4aa2c2bbfaadae373dadcfca11b3358912212
+</div>
+
+</small></div>
+
